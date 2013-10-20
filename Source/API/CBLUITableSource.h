@@ -7,7 +7,7 @@
 //
 
 #import <UIKit/UIKit.h>
-@class CBLDocument, CBLLiveQuery, CBLQueryRow;
+@class CBLDocument, CBLLiveQuery, CBLQueryRow, CBLQuery;
 
 /** A UITableView data source driven by a CBLLiveQuery.
     It populates the table rows from the query rows, and automatically updates the table as the
@@ -24,6 +24,10 @@
 
 /** The query whose rows will be displayed in the table. */
 @property (retain) CBLLiveQuery* query;
+
+@property (retain) CBLQuery* reducedQuery;
+
+@property (retain) NSMutableArray* groupedQueries;
 
 /** Rebuilds the table from the query's current .rows property. */
 -(void) reloadFromQuery;
@@ -74,6 +78,11 @@
 /** Additional methods for the table view's delegate, that will be invoked by the CBLUITableSource. */
 @protocol CBLUITableDelegate <UITableViewDelegate>
 @optional
+
+-(BOOL)isGrouped;
+
+-(NSString*)couchTableSource:(CBLUITableSource *)source titleForHeaderForSectionFromKey:(CBLQueryRow*)row;
+
 
 /** Allows delegate to return its own custom cell, just like -tableView:cellForRowAtIndexPath:.
     If this returns nil the table source will create its own cell, as if this method were not implemented. */

@@ -97,6 +97,8 @@ typedef enum {
 /** Returns a live query with the same parameters. */
 - (CBLLiveQuery*) asLiveQuery;
 
+- (instancetype) initWithQuery: (CBLQuery*)query;
+
 @end
 
 
@@ -140,6 +142,7 @@ typedef enum {
 /** Error, if the query failed.
     NOTE: This will only ever be set in an enumerator returned from an _asynchronous_ query. The CBLQuery.rows method returns a nil enumerator on error.) */
 @property (readonly) NSError* error;
+
 
 @end
 
@@ -185,5 +188,6 @@ typedef enum {
 
 /** The local sequence number of the associated doc/revision. */
 @property (readonly) UInt64 localSequence;
+
 
 @end

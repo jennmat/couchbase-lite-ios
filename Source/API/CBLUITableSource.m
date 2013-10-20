@@ -45,10 +45,28 @@
 
 @synthesize tableView=_tableView;
 @synthesize rows=_rows;
-
+@synthesize reducedQuery;
+@synthesize groupedQueries;
 
 - (CBLQueryRow*) rowAtIndex: (NSUInteger)index {
     return [_rows objectAtIndex: index];
+}
+
+
+-(void)buildGroupedQueries{
+    if ( [self isGroupedView] ){
+        reducedQuery = [[CBLQuery alloc] initWithQuery:_query];
+        reducedQuery.groupLevel = 1;
+        groupedQueries = [[NSMutableArray alloc] initWithCapacity:[[reducedQuery rows] count]];
+        for(CBLQueryRow* row in [reducedQuery rows]){
+            CBLQuery* query = [[CBLQuery alloc] initWithQuery:_query];
+            id key = row.key;
+            [query setStartKey:key];
+            [query setEndKey:key];
+            [groupedQueries addObject:query];
+        }
+    }
+    
 }
 
 
@@ -65,9 +83,9 @@
 
 
 - (CBLQueryRow*) rowAtIndexPath: (NSIndexPath*)path {
-    if (path.section == 0)
-        return [_rows objectAtIndex: path.row];
-    return nil;
+    CBLQuery* query = [groupedQueries objectAtIndex:path.section];
+    return [[query rows] rowAtIndex:path.row];
+    
 }
 
 
@@ -100,6 +118,7 @@
 }
 
 
+
 -(void) reloadFromQuery {
     CBLQueryEnumerator* rowEnum = _query.rows;
     if (rowEnum) {
@@ -114,6 +133,7 @@
                        updateFromQuery: _query
                           previousRows: oldRows];
         } else {
+            [self buildGroupedQueries];
             [self.tableView reloadData];
         }
     }
@@ -148,11 +168,36 @@
     return [value description];
 }
 
-
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return _rows.count;
+    if ( [self isGroupedView] ){
+        return [[[[self groupedQueries] objectAtIndex:section] rows] count];
+    } else {
+        return _rows.count;
+    }
 }
 
+-(BOOL) isGroupedView {
+    id delegate = _tableView.delegate;
+    if ( [delegate respondsToSelector:@selector(isGrouped)] ){
+        return [delegate isGrouped];
+    }
+    return NO;
+}
+
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    if ( [self isGroupedView] == YES ){
+        return [reducedQuery.rows count];
+    } else {
+        return 1;
+    }
+}
+
+
+-(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{
+    CBLQueryRow* row = [[self.reducedQuery rows] rowAtIndex:section];
+    return TELL_DELEGATE(@selector(couchTableSource:titleForHeaderForSectionFromKey:), row);
+}
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
          cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -167,7 +212,12 @@
             cell = [[UITableViewCell alloc] initWithStyle: UITableViewCellStyleDefault
                                           reuseIdentifier: @"CBLUITableDelegate"];
         
-        CBLQueryRow* row = [self rowAtIndex: indexPath.row];
+        CBLQueryRow* row;
+        if ( [self isGroupedView] == YES ){
+            row = [self rowAtIndexPath:indexPath];
+        }else {
+            row = [self rowAtIndex: indexPath.row];
+        }
         cell.textLabel.text = [self labelForRow: row];
         
         // Allow the delegate to customize the cell:
